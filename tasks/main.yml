@@ -12,13 +12,10 @@
       validate: 'visudo -cf %s'
 
   - name: Create Kubernetes group
-    group: name=Kubernetes gid=1002 state=present
+    group: name=kubernetes gid=1002 state=present
 
   - name: Create Kubernetes user
-    user: name=Kubernetes uid=1001 group={{ item }} state=present append=yes shell=/bin/bash
-    with_items:
-      - Kubernetes
-      - wheel
+    user: name=Kubernetes uid=1001 groups=kubernetes,wheel state=present append=yes shell=/bin/bash
 
   - name: Setup Bridge networking
     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root

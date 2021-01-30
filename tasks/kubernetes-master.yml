@@ -13,9 +13,20 @@
     when: not kubernetes_init_stat.stat.exists
     register: kube_gets_init
 
-  - name: Enabling kubectl for Kubernetes user
-    command: >
-      mkdir -p Kubernetes/.kube
-      cp /etc/kubernetes/admin.conf Kubernetes/.kube/config
-      chown 1001:1001 Kubernetes/.kube/config
-    when: kube_gets_init.changed
+  - name: Check if kubernetes user .kube directory has already been created.
+    stat: path=/home/kubernetes/.kube/config
+    register: kubernetes_user_folder
+
+  - name: Create .kube folder with config for kubernetes user.
+    block:
+
+      - name: Create .kube folder inside home.
+        file: src=/home/kubernetes/.kube state=directory
+      
+      - name: Copy config file.
+        copy: src=/etc/kubernetes/admin.conf dest=kubernetes/.kube/config remote_src=yes
+
+      - name: Change permissions on folder.
+        file: path=/home/kubernetes/.kube/config owner=kubernetes group=kubernetes 
+
+    when: kubernetes_user_folder.stat.exists
