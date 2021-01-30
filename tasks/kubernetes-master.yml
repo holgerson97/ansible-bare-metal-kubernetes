@@ -24,7 +24,7 @@
         file: path=/home/kubernetes/.kube state=directory
 
       - name: Copy config file.
-        copy: src=/etc/kubernetes/admin.conf dest=kubernetes/.kube/config remote_src=yes
+        copy: src=/etc/kubernetes/admin.conf dest=/home/kubernetes/.kube/config remote_src=yes
 
       - name: Change permissions on folder.
         file: path=/home/kubernetes/.kube/config owner=kubernetes group=kubernetes
