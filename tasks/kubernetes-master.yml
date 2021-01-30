@@ -21,7 +21,7 @@
     block:
 
       - name: Create .kube folder inside home.
-        file: src=/home/kubernetes/.kube state=directory
+        file: path=/home/kubernetes/.kube state=directory
 
       - name: Copy config file.
         copy: src=/etc/kubernetes/admin.conf dest=kubernetes/.kube/config remote_src=yes
