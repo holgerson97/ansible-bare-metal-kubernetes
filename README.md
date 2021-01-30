@@ -2,7 +2,7 @@
 
 Playbook to create a Kubernetes cluster using kubeadm with n number nodes.
 
-[![ansible-lint Actions Status](https://github.com/NilsCarstensen/kubernetes-playbook/workflows/ansible-lint/badge.svg)](https://github.com/NilsCarstensen/kubernetes-playbook/actions)
+[![ansible-lint Actions Status](https://github.com/NilsCarstensen/kubernetes-ansible-playbook/workflows/ansible-lint/badge.svg)](https://github.com/NilsCarstensen/kubernetes-ansible-playbook/actions)
 
 ## What is this playbook doing?
 
