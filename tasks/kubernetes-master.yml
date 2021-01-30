@@ -27,6 +27,6 @@
         copy: src=/etc/kubernetes/admin.conf dest=kubernetes/.kube/config remote_src=yes
 
       - name: Change permissions on folder.
-        file: path=/home/kubernetes/.kube/config owner=kubernetes group=kubernetes 
+        file: path=/home/kubernetes/.kube/config owner=kubernetes group=kubernetes
 
     when: kubernetes_user_folder.stat.exists
