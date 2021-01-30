@@ -1,0 +1,7 @@
+  - name: Firewall rules
+    ufw: rule=allow proto=tcp direction=in port={{ item }}
+    loop: ['10250', '30000:32767']
+
+  - name: Join node to Kubernetes master
+    shell: >
+      {{ kubernetes_join_command }}

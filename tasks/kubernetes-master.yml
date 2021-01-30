@@ -1,0 +1,21 @@
+  - name: firewall rules
+    ufw: rule=allow proto=tcp direction=in port={{ item }}
+    loop: ['6443', '2379:2380', '10252']
+
+  - name: Check if Kubernetes has already been initialized.
+    stat: path=/etc/kubernetes/admin.conf
+    register: kubernetes_init_stat
+
+  - name: Initialize Kubernetes cluster
+    command: >
+      kubeadm init
+      --pod-network-cidr={{ kubernetes_pod_network }}
+    when: not kubernetes_init_stat.stat.exists
+    register: kube_gets_init
+
+  - name: Enabling kubectl for Kubernetes user
+    command: >
+      mkdir -p Kubernetes/.kube
+      cp /etc/kubernetes/admin.conf Kubernetes/.kube/config
+      chown 1001:1001 Kubernetes/.kube/config
+    when: kube_gets_init.changed

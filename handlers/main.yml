@@ -1,0 +1,14 @@
+  - name: docker_daemon
+    systemd:
+      name: docker
+      state: restarted
+      enabled: yes
+      daemon_reload: yes
+    when: docker_service.changed
+
+  - name: kubelet_daemon
+    systemd:
+      name: kubelet
+      state: restarted
+      enabled: yes
+      daemon_reload: yes
