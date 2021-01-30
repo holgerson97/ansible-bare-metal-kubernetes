@@ -15,7 +15,7 @@
     group: name=kubernetes gid=1002 state=present
 
   - name: Create Kubernetes user
-    user: name=Kubernetes uid=1001 groups=kubernetes,wheel state=present append=yes shell=/bin/bash
+    user: name=kubernetes uid=1001 groups=kubernetes,wheel state=present append=yes shell=/bin/bash
 
   - name: Setup Bridge networking
     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
