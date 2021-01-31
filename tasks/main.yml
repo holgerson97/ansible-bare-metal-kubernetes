@@ -82,7 +82,6 @@
 
   - name: Get the kubeadm join command from the Kubernetes master.
     command: kubeadm token create --print-join-command
-    changed_when: false
     when: kubernetes_role == 'master'
     register: kubernetes_join_command_result
 
