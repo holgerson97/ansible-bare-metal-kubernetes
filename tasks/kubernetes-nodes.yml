@@ -2,6 +2,11 @@
     ufw: rule=allow proto=tcp direction=in port={{ item }}
     loop: ['10250', '30000:32767']
 
+  - name: Check if Kubernetes cluster has already been initialized on the node.
+    stat: path=/etc/kubernetes/kubelet.conf
+    register: kubernetes_init_stat
+    
   - name: Join node to Kubernetes master
     shell: >
       {{ kubernetes_join_command }}
+    when: not kubernetes_init_stat.stat.exists
