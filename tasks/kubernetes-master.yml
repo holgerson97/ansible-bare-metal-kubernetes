@@ -6,12 +6,12 @@
     stat: path=/etc/kubernetes/admin.conf
     register: kubernetes_init_stat
 
-  - name: Initialize Kubernetes cluster
+  - name: Initialize Kubernetes cluster 
     command: >
       kubeadm init
       --pod-network-cidr={{ kubernetes_pod_network }}
-    when: not kubernetes_init_stat.stat.exists
-    register: kube_gets_init
+    when: not kubernetes_init_stat.stat.exists 
+    register: cluster_created
 
   - name: Check if kubernetes user .kube directory has already been created.
     stat: path=/home/kubernetes/.kube/config
@@ -29,4 +29,11 @@
       - name: Change permissions on folder.
         file: path=/home/kubernetes/.kube/config owner=kubernetes group=kubernetes
 
-    when: kubernetes_user_folder.stat.exists
+    when: not kubernetes_user_folder.stat.exists
+
+  - name: Deploy flannel networking
+    command: >
+      kubectl apply -f
+      https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    become_user: kubernetes
+    when: cluster_created.changed
