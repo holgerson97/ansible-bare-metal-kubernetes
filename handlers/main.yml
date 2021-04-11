@@ -1,14 +1,41 @@
-  - name: docker_daemon
-    systemd:
-      name: docker
-      state: restarted
-      enabled: yes
-      daemon_reload: yes
-    when: docker_service.changed
+---
+- name: docker_daemon
+  systemd:
+    name: docker
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  when: docker_service.changed
 
-  - name: kubelet_daemon
-    systemd:
-      name: kubelet
-      state: restarted
-      enabled: yes
-      daemon_reload: yes
+- name: containerd_daemon
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  when: containerd_service.changed
+
+- name: crio_daemon
+  systemd:
+    name: crio
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  when: crio_service.changed
+
+- name: kubelet_daemon
+  systemd:
+    name: kubelet
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  
+- name: update_repos_ubuntu
+  apt:
+    update_cache: yes
+  when: repos_status_ubuntu.changed
+
+- name: update_repos_centos
+  yum: 
+    update_cache: yes
+  when: update_repos_centos.changed
