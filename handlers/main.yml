@@ -5,7 +5,6 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
-  when: docker_service.changed
 
 - name: containerd_daemon
   systemd:
@@ -13,7 +12,6 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
-  when: containerd_service.changed
 
 - name: crio_daemon
   systemd:
@@ -21,7 +19,6 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
-  when: crio_service.changed
 
 - name: kubelet_daemon
   systemd:
@@ -29,13 +26,7 @@
     state: restarted
     enabled: yes
     daemon_reload: yes
-  
-- name: update_repos_ubuntu
-  apt:
-    update_cache: yes
-  when: repos_status_ubuntu.changed
 
 - name: update_repos_centos
   yum: 
     update_cache: yes
-  when: update_repos_centos.changed
