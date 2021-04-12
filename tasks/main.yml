@@ -1,79 +1,129 @@
-  # - name: Make sure we have a 'wheel' group
-  #   group:
-  #     name: wheel
-  #     state: present
+---
+- name: Setup wheel group
+  block:
+  
+  - name: Make sure we have a 'wheel' group
+    group: name=wheel state=present
 
-  # - name: Allow 'wheel' group to have passwordless sudo
-  #   lineinfile:
-  #     dest: /etc/sudoers
-  #     state: present
-  #     regexp: '^%wheel'
-  #     line: '%wheel ALL=(ALL) NOPASSWD: ALL'
-  #     validate: 'visudo -cf %s'
+  - name: Allow 'wheel' group to have passwordless sudo
+    lineinfile:
+      dest: /etc/sudoers
+      state: present
+      regexp: '^%wheel'
+      line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+      validate: 'visudo -cf %s'
 
-  # - name: Create Kubernetes group
-  #   group: name=kubernetes gid=1002 state=present
+  - name: Create Kubernetes group
+    group: name=kubernetes gid=1002 state=present
 
-  # - name: Create Kubernetes user
-  #   user: name=kubernetes uid=1001 groups=kubernetes,wheel state=present append=yes shell=/bin/bash
+  - name: Create Kubernetes user
+    user: name=kubernetes uid=1001 groups=kubernetes,wheel state=present append=yes shell=/bin/bash
 
-  # - name: Setup Bridge networking
-  #   copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
-  #   with_items:
-  #     - { src: modules-k8s.conf, dest: /etc/modules-load.d/k8s.conf }
-  #     - { src: sysctl-k8s.conf, dest: /etc/sysctl.d/k8s.conf }
-  #   register: network
+- name: Setup Bridge networking
 
-  # - shell: sysctl --system
-  #   become: yes
-  #   when: network.changed
+  - name: Setup Bridge networking
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: modules-k8s.conf, dest: /etc/modules-load.d/k8s.conf }
+      - { src: sysctl-k8s.conf, dest: /etc/sysctl.d/k8s.conf }
+    register: network
 
-  - name: Install required system packages
-    apt: name={{ item }} state=latest
-    loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'gnupg2']
-    when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
+  - shell: sysctl --system
+    become: yes
+    when: network.changed
+  
+- name: Install required packages (Ubuntu/(Debian))
+  block:
 
-  - name: Install required container packages
+    - name: Install required system packages
+      apt: name={{ item }} state=latest
+      loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'gnupg2']
+
+  when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
+
+- name: Install required packages (CentOS/RHEL)
+
+  - name: Install required container packages (CentOS/RHEL)
     yum: name={{ item }} state=latest
     loop: [ 'yum-utils' ]
-    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-  - include_tasks: container-runtime.yml
+- include_tasks: container-runtime.yml
 
-  # - name: Kubernetes GPG Key
-  #   apt_key: url=https://packages.cloud.google.com/apt/doc/apt-key.gpg state=present
+- name: Install kube packages (Ubuntu/Debian)
+  block:
 
-  # - name: Kubernetes Repository
-  #   apt_repository:
-  #     repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
-  #     state: present
-  #     update_cache: yes
+  - name: Kubernetes GPG Key
+    apt_key: url=https://packages.cloud.google.com/apt/doc/apt-key.gpg state=present
 
-  # - name: Install kube-packages
-  #   apt: name={{ item }} state=latest
-  #   loop: [ 'kubelet', 'kubeadm', 'kubectl' ]
-  #   notify: kubelet_daemon
+  - name: Kubernetes Repository
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      update_cache: yes
 
-  # - name: Mark kube-packages on hold
-  #   dpkg_selections: name={{ item }} selection=hold
-  #   loop: [ 'kubelet', 'kubeadm', 'kubectl' ]
+  - name: Install kube-packages
+    apt: name="{{ item.name }}={{ item.version }}" state=latest force=true
+    with_items:
+      - { name: 'kubelet', version: "{{ kubelet_version }}" }
+      - { name: 'kubeadm', version: "{{ kubeadm_version }}" }
+      - { name: 'kubectl', version: "{{ kubectl_version }}" }
+    notify: kubelet_daemon
 
-  # - include_tasks: kubernetes-master.yml
-  #   when: kubernetes_role == 'master'
+  - name: Mark kube-packages on hold
+    dpkg_selections: name={{ item }} selection=hold
+    loop: [ 'kubelet', 'kubeadm', 'kubectl' ]
 
-  # - name: Get the kubeadm join command from the Kubernetes master.
-  #   command: kubeadm token create --print-join-command
-  #   when: kubernetes_role == 'master'
-  #   register: kubernetes_join_command_result
+  when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
 
-  # - name: Set the kubeadm join command globally.
-  #   set_fact:
-  #     kubernetes_join_command: >
-  #       {{ kubernetes_join_command_result.stdout }}
-  #   when: kubernetes_join_command_result.stdout is defined
-  #   delegate_to: "{{ item }}"
-  #   delegate_facts: true
-  #   with_items: "{{ groups['kubernetes_nodes'] }}"
+- name: Install kube packages (CentOS/RHEL)
+  block:
 
-  # - include_tasks: kubernetes-nodes.yml
-  #   when: kubernetes_role == 'node'
+  - name: Kubernetes repository
+    yum_repository:
+      name: Kubernetes
+      baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+      enabled: yes
+      gpgcheck: yes
+      repo_gpgcheck: yes
+      gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+      exclude: kubelet kubeadm kubectl
+    notify: update_repos_centos
+    
+  - name: Add kernel modules for crio
+    become: yes
+    command: "{{ item }}"
+    with_items:
+    - setenforce 0
+    - sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+  - name: kube packages
+    yum: name="{{ item.name }}={{ item.version }}" state=latest force=true
+    with_items:
+      - { name: 'kubelet', version: "{{ kubelet_version }}" }
+      - { name: 'kubeadm', version: "{{ kubeadm_version }}" }
+      - { name: 'kubectl', version: "{{ kubelet_version }}" }
+    notify: kubelet_daemon
+
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- include_tasks: kubernetes-master.yml
+  when: kubernetes_role == 'master'
+
+- name: Get the kubeadm join command from the Kubernetes master.
+  command: kubeadm token create --print-join-command
+  when: kubernetes_role == 'master'
+  register: kubernetes_join_command_result
+
+- name: Set the kubeadm join command globally.
+  set_fact:
+    kubernetes_join_command: >
+      {{ kubernetes_join_command_result.stdout }}
+  when: kubernetes_join_command_result.stdout is defined
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  with_items: "{{ groups['kubernetes_nodes'] }}"
+
+- include_tasks: kubernetes-nodes.yml
+  when: kubernetes_role == 'node'

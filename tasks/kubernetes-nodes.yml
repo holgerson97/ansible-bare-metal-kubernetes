@@ -1,6 +1,19 @@
   - name: Firewall rules
-    ufw: rule=allow proto=tcp direction=in port={{ item }}
+    ufw: 
+      rule: allow
+      proto: tcp
+      direction: in 
+      port: {{ item }}
     loop: ['10250', '30000:32767']
+    when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
+
+  - name: Firewall rules (Centos/(RHEL))
+    ansible.posix.firewalld:
+      rule: allow
+      permanent: yes
+      port: {{ item }}
+    loop: ['10250/tcp', '30000:32767']
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
   - name: Check if Kubernetes cluster has already been initialized on the node.
     stat: path=/etc/kubernetes/kubelet.conf
