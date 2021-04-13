@@ -4,10 +4,7 @@
     when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
   
   - name: Firewall rules (Centos/(RHEL))
-    ansible.posix.firewalld:
-      rule: allow
-      permanent: yes
-      port: {{ item }}
+    firewalld: state=enabled port={{ item }}
     loop: ['6443/tcp', '2379:2380/tcp', '10252/tcp']
     when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 

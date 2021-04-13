@@ -20,6 +20,7 @@
     user: name=kubernetes uid=1001 groups=kubernetes,wheel state=present append=yes shell=/bin/bash
 
 - name: Setup Bridge networking
+  block:
 
   - name: Setup Bridge networking
     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
@@ -42,6 +43,7 @@
   when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
 
 - name: Install required packages (CentOS/RHEL)
+  block:
 
   - name: Install required container packages (CentOS/RHEL)
     yum: name={{ item }} state=latest
@@ -49,7 +51,8 @@
   
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-- include_tasks: container-runtime.yml
+- name: Install container runtime
+  include_tasks: container-runtime.yml
 
 - name: Install kube packages (Ubuntu/Debian)
   block:
@@ -64,7 +67,7 @@
       update_cache: yes
 
   - name: Install kube-packages
-    apt: name="{{ item.name }}={{ item.version }}" state=latest force=true
+    apt: name={{ item.name }}={{ item.version }} force=true
     with_items:
       - { name: 'kubelet', version: "{{ kubelet_version }}" }
       - { name: 'kubeadm', version: "{{ kubeadm_version }}" }
@@ -99,11 +102,11 @@
     - sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
   - name: kube packages
-    yum: name="{{ item.name }}={{ item.version }}" state=latest force=true
+    yum: name="{{ item.name }}={{ item.version }}" force=true
     with_items:
       - { name: 'kubelet', version: "{{ kubelet_version }}" }
       - { name: 'kubeadm', version: "{{ kubeadm_version }}" }
-      - { name: 'kubectl', version: "{{ kubelet_version }}" }
+      - { name: 'kubectl', version: "{{ kubectl_version }}" }
     notify: kubelet_daemon
 
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
