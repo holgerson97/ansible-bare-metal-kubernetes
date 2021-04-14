@@ -13,6 +13,11 @@
     enabled: yes
     daemon_reload: yes
 
+- name: containerd_config
+  become: yes
+  command: containerd config default
+  notify: containerd_daemon
+  
 - name: crio_daemon
   systemd:
     name: crio
