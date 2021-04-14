@@ -57,16 +57,16 @@
 - name: Install kube packages (Ubuntu/Debian)
   block:
 
-  - name: Kubernetes GPG Key
+  - name: Kubernetes GPG Key (Ubuntu/Debian)
     apt_key: url=https://packages.cloud.google.com/apt/doc/apt-key.gpg state=present
 
-  - name: Kubernetes Repository
+  - name: Kubernetes Repository (Ubuntu/Debian)
     apt_repository:
       repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
       state: present
       update_cache: yes
 
-  - name: Install kube-packages
+  - name: Install kube-packages (Ubuntu/Debian)
     apt: name={{ item.name }}={{ item.version }} force=true
     with_items:
       - { name: 'kubelet', version: "{{ kubelet_version }}" }
@@ -74,7 +74,7 @@
       - { name: 'kubectl', version: "{{ kubectl_version }}" }
     notify: kubelet_daemon
 
-  - name: Mark kube-packages on hold
+  - name: Mark kube-packages on hold (Ubuntu/Debian)
     dpkg_selections: name={{ item }} selection=hold
     loop: [ 'kubelet', 'kubeadm', 'kubectl' ]
 
@@ -83,7 +83,7 @@
 - name: Install kube packages (CentOS/RHEL)
   block:
 
-  - name: Kubernetes repository
+  - name: Kubernetes repository (CentOS/RHEL)
     yum_repository:
       name: Kubernetes
       baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
@@ -92,17 +92,16 @@
       repo_gpgcheck: yes
       gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
       exclude: kubelet kubeadm kubectl
-    notify: update_repos_centos
     
-  - name: Add kernel modules for crio
+  - name: Add kernel modules for crio (CentOS/RHEL)
     become: yes
     command: "{{ item }}"
     with_items:
     - setenforce 0
     - sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-  - name: kube packages
-    yum: name="{{ item.name }}={{ item.version }}" force=true
+  - name: kube packages (CentOS/RHEL)
+    yum: name="{{ item.name }}={{ item.version }}" force=true update_cache=yes
     with_items:
       - { name: 'kubelet', version: "{{ kubelet_version }}" }
       - { name: 'kubeadm', version: "{{ kubeadm_version }}" }

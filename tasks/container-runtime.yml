@@ -5,16 +5,16 @@
   - name: Ubuntu/Debian install
     block:
 
-    - name: Add Docker's official GPG Key
+    - name: Add Docker's official GPG Key (Ubuntu/Debian)
       apt_key: url=https://download.docker.com/linux/ubuntu/gpg state=present
 
-    - name: Add Docker's repository
+    - name: Add Docker's repository (Ubuntu/Debian)
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
         state: present
         update_cache: yes
 
-    - name: Install conatiner runtime
+    - name: Install conatiner runtime (Ubuntu/Debian)
       apt: name="{{ item.name }}={{ item.version }}" state=present force=true
       with_items:
         - { name: 'containerd.io', version: "{{ containerd_version }}" }
@@ -26,12 +26,11 @@
   - name: CentOS/RHEL install
     block:
 
-    - name: Add Docker's repository
+    - name: Add Docker's repository (CentOS/RHEL)
       yum_repository: name=https://download.docker.com/linux/centos/docker-ce.repo state=present
-      #notifiy: update_repos_centos
 
-    - name: Install conatiner runtime
-      yum: name="{{ item.name }}-{{ item.version }}"
+    - name: Install conatiner runtime (CentOS/RHEL)
+      yum: name="{{ item.name }}-{{ item.version }}" update_cache=yes
       with_items:
         - { name: 'containerd.io', version: "{{ containerd_version }}" }
         - { name: 'docker-ce', version: "{{ centos_docker_version }}" }
@@ -52,88 +51,82 @@
 
   when: docker_runtime
 
-# - name: containerd-runtime
-#   block:
+- name: containerd-runtime
+  block:
   
-#   - name: Create containerd.conf
-#     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
-#     with_items:
-#       - { src: containerd.conf, dest: /etc/modules-load.d/containerd.conf }
-#     register: containerd_conf
+  - name: Create containerd.conf
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: containerd.conf, dest: /etc/modules-load.d/containerd.conf }
+    register: containerd_conf
 
-#   - name: Add kernel modules for containerd
-#     become: yes
-#     command: "{{ item }}"
-#     with_items:
-#     - modprobe overlay
-#     - modprobe br_netfilter
-#     when: containerd_conf.changed
+  - name: Add kernel modules for containerd
+    become: yes
+    command: "{{ item }}"
+    with_items:
+    - modprobe overlay
+    - modprobe br_netfilter
+    when: containerd_conf.changed
 
-#   - name: etup required sysctl params
-#     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
-#     with_items:
-#       - { src: 99-kubernetes-cri.conf, dest: /etc/sysctl.d/99-kubernetes-cri.conf }
-#     register: sysctl_params
+  - name: etup required sysctl params
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: 99-kubernetes-cri.conf, dest: /etc/sysctl.d/99-kubernetes-cri.conf }
+    register: sysctl_params
 
-#   - shell: sysctl --system
-#     become: yes
-#     when: sysctl_params.changed
+  - shell: sysctl --system
+    become: yes
+    when: sysctl_params.changed
 
-#   - name: Ubuntu/Debian install
-#     block:
+  - name: Ubuntu/Debian install
+    block:
 
-#       - name: Add Docker's official GPG Key
-#         apt_key: url=https://download.docker.com/linux/ubuntu/gpg state=present
+      - name: Add Docker's official GPG Key (Ubuntu/Debian)
+        apt_key: url=https://download.docker.com/linux/ubuntu/gpg state=present
 
-#       - name: Add Docker's repository
-#         apt_repository:
-#           repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
-#           state: present
-#           update_cache: yes
+      - name: Add Docker's repository (Ubuntu/Debian)
+        apt_repository:
+          repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+          state: present
+          update_cache: yes
 
-#       - name: Install conatiner runtime
-#         apt: name="{{ item.name }}={{ item.version }}" state=present force=true
-#         with_items:
-#           - { name: 'containerd.io', version: "{{ containerd_version }}" }
-#         register: containerd_service
+      - name: Install conatiner runtime (Ubuntu/Debian)
+        apt: name="{{ item.name }}={{ item.version }}" state=present force=true
+        with_items:
+          - { name: 'containerd.io', version: "{{ containerd_version }}" }
+        register: containerd_service
 
-#     when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
+    when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
 
-#   - name: CentOS/RHEL install
-#     block:
+  - name: CentOS/RHEL install
+    block:
 
-#     - name: Add Docker's repository
-#       yum_repository:
-#         name: https://download.docker.com/linux/centos/docker-ce.repo
-#         state: present
-#       notify: update_repos_centos
+    - name: Add Docker's repository (CentOS/RHEL)
+      yum_repository:
+        name: https://download.docker.com/linux/centos/docker-ce.repo
+        state: present
 
-#     - name: Install conatiner runtime
-#       yum: name="{{ item.name }}-{{ item.version }}"
-#       with_items:
-#         - { name: 'containerd.io', version: "{{ containerd_version }}" }
+    - name: Install conatiner runtime (CentOS/RHEL)
+      yum: name="{{ item.name }}-{{ item.version }}" update_cache=yes
+      with_items:
+        - { name: 'containerd.io', version: "{{ containerd_version }}" }
 
-#     when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-#   - name: containerd folder
-#     become: yes
-#     file:
-#       path: /etc/containerd
-#       owner: root
-#       group: root
-#       mode: '0755'
-#       state: directory
-#     register: containerd_service
-#     notify: containerd_daemon
+  - name: Create containerd config
+    become: yes
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: config.toml, dest: /etc/containerd/config.toml }
+    register: containerd_config
 
-#   - name: Configure containerd
-#     become: yes
-#     command: "containerd config default | tee /etc/containerd/config.toml"
-#     register: containerd_service
-#     when: containerd_service.changed
-#     notify: containerd_daemon
-      
-#   when: containerd_runtime
+  - name: Configure containerd
+    become: yes
+    command: containerd config default
+    notify: containerd_daemon
+    when: containerd_config.changed
+
+  when: containerd_runtime
 
 # - name: crio-runtime
 #   block:
