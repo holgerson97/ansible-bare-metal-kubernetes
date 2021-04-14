@@ -1,6 +1,8 @@
 docker ubuntu -> yes
-docker cnetos -> no
+docker centos -> no
 containerd ubuntu -> no
 containerd centos -> no
 crio ubuntu -> no
 crio centos -> no
+
+docker runtime service restarted
