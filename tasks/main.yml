@@ -110,6 +110,8 @@
 
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
+- meta: flush_handlers
+
 - include_tasks: kubernetes-master.yml
   when: kubernetes_role == 'master'
 

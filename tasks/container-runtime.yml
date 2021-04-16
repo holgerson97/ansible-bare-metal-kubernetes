@@ -49,6 +49,8 @@
     file: path=/etc/systemd/system/docker.service.d state=directory
     notify: docker_daemon
 
+  - meta: flush_handlers
+
   when: docker_runtime
 
 - name: containerd-runtime
@@ -118,109 +120,114 @@
     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
     with_items:
       - { src: config.toml, dest: /etc/containerd/config.toml }
-    register: containerd_config
-
-  - name: Configure containerd
-    become: yes
-    command: containerd config default
     notify: containerd_daemon
-    when: containerd_config.changed
+    
+  - meta: flush_handlers
 
   when: containerd_runtime
 
-# - name: crio-runtime
-#   block:
+- name: crio-runtime
+  block:
 
-#   - name: Create crio.conf
-#     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
-#     with_items:
-#       - { src: crio.conf, dest: /etc/modules-load.d/crio.conf }
-#     register: crio_conf
+  - name: Create crio.conf
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: crio.conf, dest: /etc/modules-load.d/crio.conf }
+    register: crio_conf
 
-#   - name: Add kernel modules for crio
-#     become: yes
-#     command: "{{ item }}"
-#     with_items:
-#     - modprobe overlay
-#     - modprobe br_netfilter
-#     when: crio_conf.changed
+  - name: Add kernel modules for crio
+    become: yes
+    command: "{{ item }}"
+    with_items:
+    - modprobe overlay
+    - modprobe br_netfilter
+    when: crio_conf.changed
 
-#   - name: Setup required sysctl params
-#     copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
-#     with_items:
-#       - { src: 99-kubernetes-cri.conf, dest: /etc/sysctl.d/99-kubernetes-cri.conf }
-#     register: sysctl_params
+  - name: Setup required sysctl params
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: 99-kubernetes-cri.conf, dest: /etc/sysctl.d/99-kubernetes-cri.conf }
+    register: sysctl_params
 
-#   - shell: sysctl --system
-#     become: yes
-#     when: sysctl_params.changed
+  - shell: sysctl --system
+    become: yes
+    when: sysctl_params.changed
 
-#   - name: Ubuntu/Debian install
-#     block:
+  - name: Ubuntu/Debian install
+    block:
 
-#     - name: Ubuntu install
-#       block:
+    - name: Ubuntu install
+      block:
 
-#       - name: Add cri-o repositorys
-#         apt_repository: repo={{ item }} state=present update_cache=yes
-#         with_items:
-#         - {{ 'deb '+ 'http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/' + {{ crio_version }} + '/xUbuntu_' + {{ ansible_distribution_version }} + '/' }}
-#         - "{{ deb + https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_{{ ansible_distribution_version }}/ }}"
-#         register: repos_status_ubuntu
+      - name: Add cri-o repositorys
+        become: yes
+        apt_repository: repo={{ item.repo }} filename={{ item.repo_file }} state=present update_cache=false 
+        with_items:
+        - { repo: "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_{{ ansible_distribution_version }}/ /", repo_file: "devel:kubic:libcontainers:stable" }
+        - { repo: "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/xUbuntu_{{ ansible_distribution_version }}/ /", repo_file: "devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}"}
 
-#       - name: Add cri-o repository key
-#         apt_key: url={{ item }}
-#         with_items:
-#         - "{{ https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_{{ ansible_distribution_version }}/Release.key }}"
-#         - "{{ https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/xUbuntu_{{ ansible_distribution_version }}/Release.key }}"
-#         when: repos_status_ubuntu.changed
+      - name: Add cri-o repository key
+        apt_key: url={{ item.key }} keyring={{ item.key_file }}
+        with_items:
+        - { key: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_{{ ansible_distribution_version }}/Release.key", key_file: "/etc/apt/trusted.gpg.d/libcontainers.gpg" }
+        - { key: "https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/xUbuntu_{{ ansible_distribution_version }}/Release.key", key_file: "/etc/apt/trusted.gpg.d/libcontainers-cri-o.gpg" }
 
-#       when: ansible_distribution == "Ubuntu"
+      when: ansible_distribution == "Ubuntu"
 
-#     - name: Debian install
-#       block:
+    - name: Debian install
+      block:
 
-#       - name: Add cri-o repositorys
-#         apt_repository: repo={{ item }} state=present update_cache=yes
-#         with_items:
-#         - deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/"{{ crio_version }}"/xUbuntu_"{{ ansible_distribution_version }}"/
-#         - deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_"{{ ansible_distribution_version }}"/
-#         register: repos_status
+      - name: Add cri-o repositorys
+        apt_repository: repo={{ item.repo }} state=present update_cache=false
+        with_items:
+        - { repo: "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ ansible_distribution_version }}/ /", repo_file: "/etc/apt/sources.list.d/devel:kubic:libcontainers:stable" } 
+        - { repo: "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/{{ ansible_distribution_version }}/ /", repo_file: "/etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}" }
 
-#       - name: Add cri-o repository key
-#         apt_key: url={{ item }}
-#         with_items:
-#         - https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_"{{ ansible_distribution_version }}"/Release.key
-#         - https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:"{{ crio_version }}"/xUbuntu_"{{ ansible_distribution_version }}"/Release.key
-#         when: repos_status.changed
+      - name: Add cri-o repository key
+        apt_key: url={{ item.key }} keyring={{ item.key_file }}
+        with_items:
+        - { key: "https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/{{ ansible_distribution_version }}/Release.key", key_file: "/etc/apt/trusted.gpg.d/libcontainers.gpg" }
+        - { key: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ ansible_distribution_version }}/Release.key", key_file: "/etc/apt/trusted.gpg.d/libcontainers.gpg" }
+        when: repos_status.changed
 
-#       when: ansible_distribution == "Debian"
+      when: ansible_distribution == "Debian"
 
-#     - name: Install cri-o und cri-o-runc
-#       apt: name="{{ item.name }}={{ item.version }}" state=present force=true
-#       with_items:
-#         - { name: 'cri-o', version: 1.20 }
-#         - { name: 'cri-o-runc', version: 1.20 }
-#       notify: crio_daemon
+    - name: Install cri-o und cri-o-runc
+      apt: name={{ item.name }} state=present force=true update_cache=yes
+      with_items:
+        - { name: 'cri-o'}
+        - { name: 'cri-o-runc'}
+      notify: crio_daemon
+  
+    when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
 
-#     when: ansible_distribution == "Ubuntu" or ansible_distribution == 'Debian'
+  - name: CentOS/RHEL install
+    block:
 
-#   - name: CentOS/RHEL install
-#       block:
+    - name: Add repositorys
+      yum_repository: baseurl={{ item.repo }}  file={{ item.repo_file }}
+      with_items:
+      - { repo: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_{{ ansible_distribution_version }}/devel:kubic:libcontainers:stable.repo", repo_file: "/etc/yum.repos.d/devel:kubic:libcontainers:stable" }
+      - { repo: "https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/CentOS_{{ ansible_distribution_version }}/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo", repo_file: "/etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}" }
 
-#     	- name: Add repositorys
-#         yum_repository: baseurl={{ item }} 
-#         with_items:
-#         - "{{ https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_{{ ansible_distribution_major_version }}/devel:kubic:libcontainers:stable.repo }}"
-#         - "{{ https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/CentOS_{{ "ansible_distribution_major_version }}/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo }}"
-#         register: update_repos_centos
+    - name: Install conatiner runtime
+      yum: 
+        name: "{{ item.name }}" 
+        update_cache: yes
+      with_items:
+      - { name: 'cri-o' }
+      notify: crio_daemon
 
-#       - name: Install conatiner runtime
-#         yum: name="{{ item.name }}-{{ item.version }}"
-#         with_items:
-#           - { name: 'cri-o', version: "{{ crio_version }}" }
-#         register: 
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-#       when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  - name: Configure cgroup driver
+    copy: src={{ item.src }} dest={{ item.dest }} owner=root group=root
+    with_items:
+      - { src: 02-cgroup-manager.conf, dest: /etc/crio/crio.conf.d/02-cgroup-manager.conf }
+    notify: crio_daemon
 
-#   when: crio_runtime
+  - meta: flush_handlers
+ 
+
+
+  when: crio_runtime
