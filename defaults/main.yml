@@ -1,11 +1,11 @@
 kubernetes_pod_network: 10.244.0.0/16
 docker_runtime: False
-containerd_runtime: True
-crio_runtime: False
+containerd_runtime: False
+crio_runtime: True
 containerd_version: 1.2.13-2
 ubuntu_docker_version: 5:19.03.11~3-0~ubuntu-focal
 centos_docker_version: 19.03.0-3.el7
-crio_version: 1.20
+crio_version: "1.20"
 kubelet_version: "1.20.5-00"
 kubeadm_version: "1.20.5-00"
 kubectl_version: "1.20.5-00"
