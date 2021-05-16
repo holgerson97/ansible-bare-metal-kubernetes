@@ -26,7 +26,7 @@
   - name: Create values file
     template:
       src: /templates/metallb_values.j2
-      dest: /home/kubernetes/helm/value_files/values.yml
+      dest: /home/kubernetes/helm/value_files/metallb/values.yml
     vars:
       addressSpaces: metallb_addressspaces
 
@@ -36,6 +36,22 @@
       chart_ref: bitnami/metallb
       chart_version: {{ metallb_version }}
       values_file:
-      - /home/kubernetes/helm/value_files/values.yml
+      - /home/kubernetes/helm/value_files/metallb/values.yml
 
   when: mettallb
+
+- name: Deploy ingress nginx
+  block:
+
+  - name: Add required Chart Repo
+    community.kubernetes.helm:
+      name: ingress-nginx
+      repo_url: https://kubernetes.github.io/ingress-nginx
+
+  - name: Deploy ingress nginx with HELM
+    community.kubernetes.helm:
+      name: ingress-nginx
+      chart_ref: ingress-nginx/ingress-nginx
+      chart_version: {{ ingress_nginx_version }}
+
+  when: nginx_ingress
