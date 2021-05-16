@@ -1,0 +1,41 @@
+---
+- name: Install HELM on master
+  block:
+
+  - name: Check if HELM is installed.
+    stat: path=/usr/local/bin/helm
+    register: helm_installed
+
+  - name: Install HELM
+    command: >
+      curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+      chmod 700 get_helm.sh
+      ./get_helm.sh
+    when: not helm_installed.stat.exists 
+
+  when: helm
+
+- name: Deploy MetalLB
+  block:
+
+  - name: Add required Chart Repo
+    community.kubernetes.helm:
+      name: bitnami/metallb
+      repo_url: https://charts.bitnami.com/bitnami
+
+  - name: Create values file
+    template:
+      src: /templates/metallb_values.j2
+      dest: /home/kubernetes/helm/value_files/values.yml
+    vars:
+      addressSpaces: metallb_addressspaces
+
+  - name: Deploy MetalLB with HELM
+    community.kubernetes.helm:
+      name: metallb
+      chart_ref: bitnami/metallb
+      chart_version: {{ metallb_version }}
+      values_file:
+      - /home/kubernetes/helm/value_files/values.yml
+
+  when: mettallb
