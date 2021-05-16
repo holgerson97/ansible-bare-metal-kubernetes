@@ -9,3 +9,5 @@ crio_version: "1.20"
 kubelet_version: "1.20.5-00"
 kubeadm_version: "1.20.5-00"
 kubectl_version: "1.20.5-00"
+metallb_version: latest
+ingress_nginx_version: latest
