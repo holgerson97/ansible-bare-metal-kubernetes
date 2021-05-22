@@ -44,3 +44,5 @@
       https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
     become_user: kubernetes
     when: cluster_created.changed
+  
+  # - include_tasks: kubernetes-addons.yml
